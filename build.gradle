@@ -1,0 +1,214 @@
+buildscript {
+    ext {
+        queryDslVersion = "5.0.0"
+        springBootVersion = '2.1.8.RELEASE'
+        jacocoVersion = '0.8.7'
+        set('springCloudVersion', "2021.0.5")
+    }
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+        classpath "org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:3.0"
+    }
+}
+
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '2.7.3'
+    id 'io.spring.dependency-management' version '1.1.0'
+    // queryDsl 플러그인
+    id "com.ewerk.gradle.plugins.querydsl" version "1.0.10"
+}
+
+apply plugin: 'jacoco'
+group = 'com.socket_redis'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '11'
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+    all {
+        resolutionStrategy {
+            force 'com.fasterxml.jackson.core:jackson-databind:2.13.1'
+            force 'com.nimbusds:nimbus-jose-jwt:9.31'
+        }
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven { url 'https://repo.spring.io/milestone' }
+    maven { url 'https://repo.spring.io/snapshot' }
+}
+
+dependencies {
+    // 유효성 검사
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // Junit 의존성
+    testImplementation 'org.junit.platform:junit-platform-launcher:1.9.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.9.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.9.2'
+
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+
+    implementation 'org.mapstruct:mapstruct:1.4.2.Final'
+    annotationProcessor "org.mapstruct:mapstruct-processor:1.4.2.Final"
+    annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
+
+    implementation 'commons-io:commons-io:2.11.0'
+
+    // QueryDSL
+    implementation "com.querydsl:querydsl-jpa:${queryDslVersion}"
+    annotationProcessor "com.querydsl:querydsl-apt:${queryDslVersion}"
+
+//    implementation 'mysql:mysql-connector-java:8.0.28'
+    implementation 'com.h2database:h2:1.4.200'
+//    implementation 'me.yaman.can:spring-boot-webflux-h2-console:0.0.1-SNAPSHOT'
+
+    implementation 'org.jsoup:jsoup:1.15.3'
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+//    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    implementation("io.netty:netty-resolver-dns-native-macos:4.1.79.Final:osx-aarch_64")
+    testImplementation 'org.projectlombok:lombok:1.18.22'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+//    testImplementation 'org.springframework.security:spring-security-test'
+
+    // Redis
+    implementation 'com.github.kstyrc:embedded-redis:0.6'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    implementation 'org.apache.httpcomponents:httpclient'
+    testImplementation 'org.apache.httpcomponents:httpclient'
+
+//    implementation "org.springframework.cloud:spring-cloud-starter-openfeign"
+
+    //	소셜로그인
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+//    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+
+    implementation 'com.google.code.gson:gson:2.9.0'
+
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.1'
+    // json 파싱
+    implementation group: 'com.googlecode.json-simple', name: 'json-simple', version: '1.1.1'
+
+    testImplementation 'org.assertj:assertj-core:3.24.2'
+
+    implementation 'com.nimbusds:nimbus-jose-jwt:9.31'
+
+    //socket
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    implementation 'org.webjars:sockjs-client:1.1.2'
+    implementation 'org.webjars:stomp-websocket:2.3.3-1'
+    implementation 'org.springframework.integration:spring-integration-core:5.5.3'
+    implementation 'org.springframework.integration:spring-integration-redis:5.5.3'
+
+
+}
+
+
+jacoco{
+    toolVersion = "${jacocoVersion}"
+//    finalizedBy 'jacocoTestReport'
+}
+
+def querydslDir = "$buildDir/generated/querydsl"
+
+querydsl {
+    jpa = true
+    querydslSourcesDir = querydslDir
+}
+sourceSets {
+    main.java.srcDir querydslDir
+}
+compileQuerydsl{
+    options.annotationProcessorPath = configurations.querydsl
+}
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+    querydsl.extendsFrom compileClasspath
+}
+
+test {
+    jacoco {
+        // 아래 설정들은 모두 기본 값. 따라서 변경할 것이 없다면 적어주지 않아도 됨
+        enabled = true
+        destinationFile = file("$buildDir/jacoco/${name}.exec")
+        includes = []
+        excludes = []
+        excludeClassLoaders = []
+        includeNoLocationClasses = false
+        sessionId = "<auto-generated value>"
+        dumpOnExit = true
+        classDumpDir = null
+        output = JacocoTaskExtension.Output.FILE
+        address = "localhost"
+        port = 6300
+        jmx = false
+    }
+}
+
+jacocoTestReport {
+    reports{
+        html.enabled true
+        xml.enabled true
+        csv.enabled true
+
+        xml.destination file("${buildDir}/jacoco/result.xml")
+
+    }
+
+
+    // 코드 커버리지 기준을 만족해야지 build 성공
+    finalizedBy 'jacocoTestCoverageVerification'
+}
+
+jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            enabled = true // 이 rule을 적용할 것이다.
+            element = 'CLASS' // class 단위로
+
+            // 브랜치 커버리지 최소 50%
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0
+            }
+
+            // 라인 커버리지 최소한 80%
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0
+            }
+
+            // 빈 줄을 제외한 코드의 라인수 최대 300라인
+            limit {
+                counter = 'LINE'
+                value = 'TOTALCOUNT'
+                maximum = 300
+            }
+
+            // 커버리지 체크를 제외할 클래스들
+            excludes = []
+        }
+    }
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
