@@ -1,50 +1,54 @@
 package com.socket_redis.websocket_redis.redis.structure;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.core.ReactiveValueOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 @Component
 @RequiredArgsConstructor
 public class BasicRedisStructureUtil implements RedisStructureInterfacte<Object>{
 
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final ReactiveRedisTemplate<String, Object> redisTemplate;
 
     @Override
-    public void save(String key, Object value) {
-        ValueOperations<String, Object> ops = redisTemplate.opsForValue();
-        ops.set(key, value);
+    public Mono<Void> save(String key, Object value) {
+        ReactiveValueOperations<String, Object> ops = redisTemplate.opsForValue();
+        return ops.set(key, value).then();
     }
 
-
     @Override
-    public Object lookup(String key) {
-        ValueOperations<String, Object> ops = redisTemplate.opsForValue();
+    public Mono<Object> lookup(String key) {
+        ReactiveValueOperations<String, Object> ops = redisTemplate.opsForValue();
         return ops.get(key);
     }
 
+
     @Override
-    public void update(String key, Object value) {
-        ValueOperations<String, Object> ops = redisTemplate.opsForValue();
-        ops.set(key, value);
+    public Mono<Void> update(String key, Object value) {
+        ReactiveValueOperations<String, Object> ops = redisTemplate.opsForValue();
+        return ops.set(key, value).then();
     }
 
     @Override
-    public void delete(String key) {
-        redisTemplate.delete(key);
+    public Mono<Void> delete(String key) {
+        return redisTemplate.delete(key).then();
     }
 
     @Override
-    public void saveExpire(String key, Object value, long time, TimeUnit unit) {
-        ValueOperations<String, Object> ops = redisTemplate.opsForValue();
-        ops.set(key, value,time,unit);
+    public Mono<Boolean> saveExpire(String key, Object value, long time, TimeUnit unit) {
+        ReactiveValueOperations<String, Object> ops = redisTemplate.opsForValue();
+        return ops.set(key, value, Duration.ofMillis(TimeUnit.MILLISECONDS.convert(time, unit)));
     }
 
     @Override
-    public long getExpiration(String key) {
+    public Mono<Duration> getExpiration(String key) {
         return redisTemplate.getExpire(key);
     }
 }

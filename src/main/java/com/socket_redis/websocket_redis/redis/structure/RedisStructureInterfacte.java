@@ -1,19 +1,22 @@
 package com.socket_redis.websocket_redis.redis.structure;
 
+import reactor.core.publisher.Mono;
+
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 public interface RedisStructureInterfacte<T> {
 
-    void save(String key , T value);
+    Mono<Void> save(String key , T value);
 
-    T lookup(String key);
+    Mono<T> lookup(String key);
 
-    void update(String key, T value);
+    Mono<Void> update(String key, T value);
 
-    void delete(String key);
+    Mono<Void> delete(String key);
 
-    void saveExpire(String key , T value , long time, TimeUnit unit);
+    Mono<Boolean> saveExpire(String key , T value , long time, TimeUnit unit);
 
-    long getExpiration(String key);
+    Mono<Duration> getExpiration(String key);
 
 }

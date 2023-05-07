@@ -2,9 +2,11 @@ package com.socket_redis.websocket_redis.redis.structure;
 
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -13,40 +15,39 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class HashRedisStructureUtil<T> implements RedisStructureInterfacte<Map<String, T>> {
 
-    private final RedisTemplate<String, T> redisTemplate;
-
+    private final ReactiveRedisTemplate<String, T> reactiveRedisTemplate;
 
     @Override
-    public void save(String key, Map<String, T> value) {
-        redisTemplate.opsForHash().putAll(key, value);
+    public Mono<Void> save(String key, Map<String, T> value) {
+        return reactiveRedisTemplate.opsForHash().putAll(key, value).then();
     }
 
     @Override
-    public Map<String, T> lookup(String key) {
-        Map<Object, Object> hash = redisTemplate.opsForHash().entries(key);
-        return hash.entrySet().stream()
-                .collect(Collectors.toMap(e -> (String) e.getKey(), e -> (T) e.getValue()));
+    public Mono<Map<String, T>> lookup(String key) {
+        return reactiveRedisTemplate.<String, T>opsForHash().entries(key)
+                .map(entry -> Map.entry(entry.getKey(), entry.getValue()))
+                .collectMap(Map.Entry::getKey, Map.Entry::getValue);
     }
 
     @Override
-    public void update(String key, Map<String, T> value) {
-        delete(key);
-        save(key, value);
+    public Mono<Void> update(String key, Map<String, T> value) {
+        return delete(key).then(save(key, value));
     }
 
     @Override
-    public void delete(String key) {
-        redisTemplate.delete(key);
+    public Mono<Void> delete(String key) {
+        return reactiveRedisTemplate.delete(key).then();
     }
 
     @Override
-    public void saveExpire(String key, Map<String, T> value, long time, TimeUnit unit) {
-        redisTemplate.opsForHash().putAll(key, value);
-        redisTemplate.expire(key, time, unit);
+    public Mono<Boolean> saveExpire(String key, Map<String, T> value, long time, TimeUnit unit) {
+        return reactiveRedisTemplate.<String, T>opsForHash().putAll(key, value)
+                .then(reactiveRedisTemplate.expire(key, Duration.ofMillis(unit.toMillis(time))));
     }
 
     @Override
-    public long getExpiration(String key) {
-        return redisTemplate.getExpire(key);
+    public Mono<Duration> getExpiration(String key) {
+        return reactiveRedisTemplate.getExpire(key);
     }
+
 }
